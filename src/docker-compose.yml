@@ -1,0 +1,28 @@
+services:
+  db:
+    container_name: pdns_db
+    image: mariadb
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./db:/var/lib/mysql
+    networks: 
+      db:
+  
+  auth:
+    container_name: pdns_auth
+    env_file: .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 53:53
+      - 53:53/udp
+      - 8081:8081
+    networks:
+      db:
+    volumes:
+      - ./config:/etc/pdns/recursor.conf.d/
+
+networks:
+  db:
