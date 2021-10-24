@@ -1,6 +1,6 @@
 # Docker - PDNS Authoritative 
 ## Description
-This is an image that pulls an Alpine Linux container, and installs PowerDNS Authoritative. This image avoids the need to have a prebuilt pdns.conf as to provide out-of-the-box functionaility, while providing the same level of customisation that including your own recursor.coinf brings.
+This is an image that pulls an Alpine Linux container, and installs PowerDNS Authoritative Server. This image avoids the need to have a prebuilt pdns.conf as to provide out-of-the-box functionaility, while providing the same level of customisation that including your own pdns.conf brings.
 
 The following configuration is baked into this image:
 
@@ -68,6 +68,16 @@ services:
 networks:
   db:
 ```
+
+Access to the CLI of the running docker image can be done by executing `docker exec -it -u root pdns_auth ash`. This allows access to the CLI tools `pdnsutil` and `pdns_control`.
+
+Zones can be added by using `pdnsutil create-zone` and can be edited using `pdnsutil edit-zone <ZONE>`
+
+Notifies can be sent by running `pdns_control notify <zone>`
+
+See https://doc.powerdns.com/authoritative/manpages/pdnsutil.1.html & https://doc.powerdns.com/authoritative/manpages/pdns_control.1.html for more information on using these tools.
+
+## Building 
 
 This image can also be built and run from scratch by following the same process aforementioned, but using the `docker-compose.yml` file inside the `src` directory found in this repository rather then at the `docker-compose.yml` found at the root of this repository
 
