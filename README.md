@@ -1,4 +1,4 @@
-# Docker - PDNS Authoritative 
+# PDNS Authoritative Nameerver Docker Image
 ## Description
 This is an image that pulls an Alpine Linux container, and installs PowerDNS Authoritative Server. This image avoids the need to have a prebuilt pdns.conf as to provide out-of-the-box functionaility, while providing the same level of customisation that including your own pdns.conf brings.
 
@@ -27,6 +27,158 @@ The webserver is enabled by default as so metrics can be scraped with no further
 Alternatively, the `pdns.conf` inside the `src` directory can be modified, and a new image can be built by renaming `docker-compose.yml.build` to `docker-compose.yml`, and then running `docker-compose build`.
 
 ## Usage
+### Kubernetes
+
+I personally use this image to run a small cluster of nameservers on Kubernetes for operation of personal domains. I use a similar deployment.yaml configuration as listed below, so you can tweak this to your requirements and apply the relevant required configurations (pv/pvc configurations, etc), ensuring they match the chosen namespace.
+
+I will at a later date write an instructional article for the full installation & configuration of stack comprising of a supermaster and two superslave nameservers.
+
+#### Generic
+
+namespace.yaml
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: <NAMESPACE_OF_YOUR_CHOICE>
+  labels:
+    name: <NAMESPACE_OF_YOUR_CHOICE>
+```
+
+#### Database
+
+mariadb-smdb-deployment.yaml
+
+```yaml
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    name: db-sm
+    namespace: <NAMESPACE_OF_YOUR_CHOICE>
+    app: db-sm
+  name: db-sm
+spec:
+  containers:
+    - image: mariadb
+      name: db-sm
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          value:  "<SECURE_ME>"
+        - name: MYSQL_PORT
+          value:  "3306"
+        - name: MYSQL_DATABASE
+          value:  "pdns"
+        - name: MYSQL_USER
+          value:  "pdns"
+        - name: MYSQL_PASSWORD
+          value:  "<SECURE_ME>"
+      volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: vm-db-sm
+  volumes:
+    - name: vm-db-sm
+      persistentVolumeClaim:
+        claimName: pvc-db-sm
+```
+
+#### PowerDNS Supermaster
+
+pdns-cm-sm.yaml -- PowerDNS Configuration File stored within a 'Configuration Manifest'
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-sm
+  namespace: <NAMESPACE_OF_YOUR_CHOICE>
+data:
+  cm-sm.conf: |
+    api=yes
+    api-key=<SECURE_ME>
+    master=yes
+    allow-axfr-ips=127.0.0.1,::1,10.0.0.0/8
+    also-notify=<CONFIGURE_ME>
+    default-soa-edit=EPOCH
+```
+
+pdns-db-sm-db.yaml
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-db-sm
+  namespace: <NAMESPACE_OF_YOUR_CHOICE>
+spec:
+  selector:
+    app: db-sm
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+```
+
+pdns-supermaster-deployment.yaml
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sm
+  labels:
+    app: sm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sm
+  template:
+    metadata:
+      labels:
+        app: sm
+    spec:
+      containers:
+        - image: martydingo/pdns-auth:latest
+          name: sm
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value:  "<SECURE_ME>"
+            - name: MYSQL_HOST
+              value:  $(SQL_DB_SM_PORT_3306_TCP_ADDR)
+            - name: MYSQL_PORT
+              value:  "3306"
+            - name: MYSQL_DATABASE
+              value:  "pdns"
+            - name: MYSQL_USER
+              value:  "pdns"
+            - name: MYSQL_PASSWORD
+              value:  "<SECURE_ME>"
+          ports:
+            - containerPort: 53
+              name: dns-tcp
+            - containerPort: 53
+              protocol: UDP
+              name: dns
+            - containerPort: 8081
+              name: api
+          volumeMounts:
+            - mountPath: /etc/pdns/pdns.conf.d/
+              name: vm-cm-sm
+              readOnly: true
+    
+      volumes:
+        - name: vm-cm-sm
+          configMap:
+            name: cm-sm
+```
+
+### Vanilla Docker
 To run this image, update the database environment variables inside the included .env file
 
 ```shell
@@ -63,7 +215,7 @@ services:
     networks:
       db:
     volumes:
-      - <PATH_OF_CONFIG_MOUNT>:/etc/pdns/recursor.conf.d/
+      - <PATH_OF_CONFIG_MOUNT>:/etc/pdns/pdns.conf.d/
 
 networks:
   db:
@@ -77,7 +229,7 @@ Notifies can be sent by running `pdns_control notify <zone>`
 
 See https://doc.powerdns.com/authoritative/manpages/pdnsutil.1.html & https://doc.powerdns.com/authoritative/manpages/pdns_control.1.html for more information on using these tools.
 
-## Building 
+### Building 
 
 This image can also be built and run from scratch by following the same process aforementioned, but using the `docker-compose.yml` file inside the `src` directory found in this repository rather then at the `docker-compose.yml` found at the root of this repository
 
@@ -106,7 +258,7 @@ services:
     networks:
       db:
     volumes:
-      - ./config:/etc/pdns/recursor.conf.d/
+      - ./config:/etc/pdns/pdns.conf.d/
 
 networks:
   db:
