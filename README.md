@@ -178,7 +178,7 @@ spec:
             name: cm-sm
 ```
 
-### Vanilla Docker
+### Docker Compose
 To run this image, update the database environment variables inside the included .env file
 
 ```shell
