@@ -1,4 +1,4 @@
-# PDNS Authoritative Nameerver Docker Image
+# PDNS Authoritative Nameserver Docker Image
 ## Description
 This is an image that pulls an Alpine Linux container, and installs PowerDNS Authoritative Server. This image avoids the need to have a prebuilt pdns.conf as to provide out-of-the-box functionaility, while providing the same level of customisation that including your own pdns.conf brings.
 
