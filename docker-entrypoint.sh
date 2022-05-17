@@ -6,19 +6,18 @@ set -euo pipefail
 export DB_PROTOCOL=`cat /etc/pdns/pdns.conf | grep "launch" | sed "s/launch=//"`
 export DB_HOST=`cat /etc/pdns/pdns.conf | grep "$DB_PROTOCOL-host" | sed "s/$DB_PROTOCOL-host=//"`
 export DB_PORT=`cat /etc/pdns/pdns.conf | grep "$DB_PROTOCOL-port" | sed "s/$DB_PROTOCOL-port=//"`
-export DB_DBNAME=`cat /etc/pdns/pdns.conf | grep "$DB_PROTOCOL-dbname" | sed "s/$DB_PROTOCOL-dbname=//"`
+export DB_DATABASE=`cat /etc/pdns/pdns.conf | grep "$DB_PROTOCOL-dbname" | sed "s/$DB_PROTOCOL-dbname=//"`
 export DB_USER=`cat /etc/pdns/pdns.conf | grep "$DB_PROTOCOL-user" | sed "s/$DB_PROTOCOL-user=//"`
 export DB_PASSWORD=`cat /etc/pdns/pdns.conf | grep "$DB_PROTOCOL-password" | sed "s/$DB_PROTOCOL-password=//"`
 
-
-if [ "${DB_PROTOCOL}"] == "gmysql" ]; 
+if [ "${DB_PROTOCOL}" == "gmysql" ]; 
 then
 
     DB_COMMAND="mysql -h ${DB_HOST} -P ${DB_PORT} -u ${DB_USER} -p${DB_PASSWORD}"
 
     # Wait for MySQL to respond
     while ! mysqladmin ping -h"$DB_HOST" --silent; do
-        >&2 echo 'MySQL is unavailable - sleeping'
+        echo 'MySQL is unavailable - sleeping'
         sleep 3
     done
 
